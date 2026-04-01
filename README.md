@@ -1,0 +1,140 @@
+# codex-zai
+
+Run current Codex CLI against Z.ai GLM models without touching your normal Codex config.
+
+`codex-zai` starts a small local bridge on `127.0.0.1` that:
+
+- accepts the OpenAI Responses API that Codex requires
+- rewrites upstream calls to Z.ai's `chat/completions` coding endpoint
+- keeps your default `codex` command unchanged
+
+## Why this exists
+
+Current Codex custom providers expect a Responses API backend.
+
+Z.ai's public OpenAI-compatible coding API is exposed through `chat/completions`, not `responses`.
+
+So the missing piece is a local bridge:
+
+`Codex -> Responses API bridge -> Z.ai chat/completions`
+
+This repo packages that bridge into a simple command.
+
+## Features
+
+- `codex` stays untouched
+- `codex-zai` works like normal Codex and forwards all arguments
+- remembers your last Z.ai API key locally
+- runs only on `127.0.0.1`
+- uses Docker Compose for reproducible setup
+- bundles a patched MIT-licensed Responses bridge based on `open-responses-server`
+
+## Install
+
+Requirements:
+
+- Docker with Compose
+- `codex` on your `PATH`
+
+Install:
+
+```bash
+git clone https://github.com/sobir-git/codex-zai-bridge.git codex-zai
+cd codex-zai
+./scripts/install.sh
+```
+
+Then:
+
+```bash
+codex-zai auth
+codex-zai exec --ephemeral "Reply with exactly one word: ok"
+```
+
+## Usage
+
+Run Codex with Z.ai:
+
+```bash
+codex-zai
+codex-zai exec --ephemeral "explain this repo"
+codex-zai --help
+```
+
+Management commands:
+
+```bash
+codex-zai status
+codex-zai doctor
+codex-zai stop
+codex-zai rebuild
+codex-zai forget-key
+```
+
+## Config
+
+After install, runtime config lives in:
+
+[`~/.local/share/codex-zai/.env`](/home/fire/.local/share/codex-zai/.env)
+
+Supported values:
+
+```env
+ZAI_API_KEY=
+CODEX_ZAI_MODEL=glm-5.1
+CODEX_ZAI_PORT=18081
+```
+
+You can also override the key per run with:
+
+```bash
+ZAI_API_KEY=... codex-zai exec --ephemeral "say ok"
+```
+
+## Architecture
+
+The local stack has two containers:
+
+1. `nginx`
+   Rewrites `POST /v1/chat/completions` to Z.ai's coding endpoint.
+
+2. `responses-server`
+   Accepts Responses API requests from Codex and converts them into chat completions.
+
+The bridge binds only to:
+
+```text
+127.0.0.1:18081
+```
+
+## Notes
+
+- This repo does not make Z.ai expose a native `/responses` API.
+- It exists because current Codex requires Responses for custom providers.
+- The vendored adapter source is MIT-licensed and acknowledged in [`THIRD_PARTY_NOTICES.md`](/home/fire/codex-zai-bridge/THIRD_PARTY_NOTICES.md).
+
+## Troubleshooting
+
+Check bridge health:
+
+```bash
+codex-zai status
+```
+
+Check prerequisites:
+
+```bash
+codex-zai doctor
+```
+
+Rebuild after changes:
+
+```bash
+codex-zai rebuild
+```
+
+Stop everything:
+
+```bash
+codex-zai stop
+```

@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+INSTALL_DIR="${HOME}/.local/share/codex-zai"
+ENV_FILE="${INSTALL_DIR}/.env"
+START_SCRIPT="${INSTALL_DIR}/scripts/start.sh"
+STOP_SCRIPT="${INSTALL_DIR}/scripts/stop.sh"
+STATUS_SCRIPT="${INSTALL_DIR}/scripts/status.sh"
+
+ensure_installed() {
+  if [[ ! -f "${ENV_FILE}" ]]; then
+    echo "codex-zai is not installed. Run ./scripts/install.sh from the repo first." >&2
+    exit 1
+  fi
+}
+
+get_env() {
+  local key="$1"
+  grep -E "^${key}=" "${ENV_FILE}" | head -n1 | cut -d= -f2-
+}
+
+set_env() {
+  local key="$1"
+  local value="$2"
+  if grep -q -E "^${key}=" "${ENV_FILE}"; then
+    sed -i "s#^${key}=.*#${key}=${value}#" "${ENV_FILE}"
+  else
+    printf '%s=%s\n' "${key}" "${value}" >> "${ENV_FILE}"
+  fi
+}
+
+save_key() {
+  local key_value="$1"
+  umask 077
+  set_env "ZAI_API_KEY" "${key_value}"
+}
+
+load_key() {
+  local key_value="${ZAI_API_KEY:-${ANTHROPIC_AUTH_TOKEN:-${OPENAI_API_KEY:-}}}"
+  if [[ -z "${key_value}" ]]; then
+    key_value="$(get_env "ZAI_API_KEY")"
+  fi
+  printf '%s' "${key_value}"
+}
+
+cmd_auth() {
+  ensure_installed
+  local key_value="${1:-}"
+  if [[ -z "${key_value}" ]]; then
+    read -r -s -p "Z.ai API key: " key_value
+    printf '\n'
+  fi
+  if [[ -z "${key_value}" ]]; then
+    echo "No API key provided." >&2
+    exit 1
+  fi
+  save_key "${key_value}"
+  echo "Saved API key to ${ENV_FILE}"
+}
+
+cmd_forget_key() {
+  ensure_installed
+  set_env "ZAI_API_KEY" ""
+  echo "Cleared saved API key."
+}
+
+cmd_doctor() {
+  ensure_installed
+  command -v docker >/dev/null || { echo "Missing: docker"; exit 1; }
+  command -v codex >/dev/null || { echo "Missing: codex"; exit 1; }
+  local port
+  port="$(get_env "CODEX_ZAI_PORT")"
+  [[ -n "${port}" ]] || port="18081"
+  echo "docker: ok"
+  echo "codex: ok"
+  echo "port: ${port}"
+  if [[ -n "$(load_key)" ]]; then
+    echo "api key: configured"
+  else
+    echo "api key: missing"
+  fi
+}
+
+cmd_start() {
+  ensure_installed
+  "${START_SCRIPT}"
+}
+
+cmd_stop() {
+  ensure_installed
+  "${STOP_SCRIPT}"
+}
+
+cmd_status() {
+  ensure_installed
+  "${STATUS_SCRIPT}"
+}
+
+cmd_rebuild() {
+  ensure_installed
+  export COMPOSE_PROJECT_NAME=codex-zai
+  docker compose --env-file "${ENV_FILE}" -f "${INSTALL_DIR}/docker-compose.yml" build
+}
+
+cmd_run_codex() {
+  ensure_installed
+  local api_key
+  api_key="$(load_key)"
+  if [[ -z "${api_key}" ]]; then
+    cmd_auth
+    api_key="$(load_key)"
+  fi
+  save_key "${api_key}"
+  "${START_SCRIPT}"
+
+  local port model
+  port="$(get_env "CODEX_ZAI_PORT")"
+  model="$(get_env "CODEX_ZAI_MODEL")"
+  [[ -n "${port}" ]] || port="18081"
+  [[ -n "${model}" ]] || model="glm-5.1"
+
+  exec env \
+    LITELLM_API_KEY="dummy-key" \
+    codex \
+    -c "model=\"${model}\"" \
+    -c 'model_provider="zai_proxy"' \
+    -c 'model_providers.zai_proxy.name="Z.AI Bridge"' \
+    -c "model_providers.zai_proxy.base_url=\"http://127.0.0.1:${port}\"" \
+    -c 'model_providers.zai_proxy.env_key="LITELLM_API_KEY"' \
+    -c 'model_providers.zai_proxy.wire_api="responses"' \
+    "$@"
+}
+
+case "${1:-}" in
+  auth)
+    shift
+    cmd_auth "${1:-}"
+    ;;
+  forget-key)
+    cmd_forget_key
+    ;;
+  start)
+    cmd_start
+    ;;
+  stop)
+    cmd_stop
+    ;;
+  status)
+    cmd_status
+    ;;
+  doctor)
+    cmd_doctor
+    ;;
+  rebuild)
+    cmd_rebuild
+    ;;
+  help|-h|--help)
+    cat <<EOF
+codex-zai
+
+Usage:
+  codex-zai auth [API_KEY]
+  codex-zai start
+  codex-zai stop
+  codex-zai status
+  codex-zai doctor
+  codex-zai rebuild
+  codex-zai forget-key
+  codex-zai <any normal codex args>
+
+Examples:
+  codex-zai auth
+  codex-zai exec --ephemeral "Reply with exactly one word: ok"
+  codex-zai --help
+EOF
+    ;;
+  *)
+    cmd_run_codex "$@"
+    ;;
+esac

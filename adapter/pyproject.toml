@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=77.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "open-responses-server"
+dynamic = ["version"]
+description = "CLI to manage the OpenAI Responses Server that bridges chat completions to responses API calls"
+authors = [
+    { name = "Ori Nachum", email = "ori.nachum@gmail.com" }
+]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.0.0",
+    "fastapi>=0.68.0",
+    "uvicorn>=0.15.0",
+    "httpx>=0.24.0",
+    "python-dotenv>=0.19.0",
+    "pydantic>=1.8.0",
+    "requests>=2.31.0",
+
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Environment :: Web Environment",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=21.0",
+    "flake8>=3.9",
+    "twine>=6.1.0",
+    "pylint>=2.17.0",
+    "bandit>=1.7.5",
+    "pre-commit>=3.3.0",
+    "coverage>=7.2.0",
+    "flake8-bandit>=4.1.1",
+    "flake8-bugbear>=23.7.10",
+    "uvicorn>=0.32.1",
+]
+
+[project.scripts]
+otc = "open_responses_server.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "open_responses_server.version.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["open_responses_server"]
+omit = []
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
+
+[project.urls]
+Homepage = "https://github.com/teabranch/open-responses-server"
+Documentation = "https://github.com/teabranch/open-responses-server"
+Repository = "https://github.com/teabranch/open-responses-server"

@@ -14,7 +14,7 @@ fi
 source "${LIB_FILE}"
 
 export COMPOSE_PROJECT_NAME="${PROJECT_NAME}"
-docker compose --env-file "${ENV_FILE}" -f "${REPO_DIR}/docker-compose.yml" up -d --build
+docker compose --env-file "${ENV_FILE}" -f "${REPO_DIR}/docker-compose.yml" up -d
 
 PORT="$(resolve_port)"
 for _ in {1..30}; do

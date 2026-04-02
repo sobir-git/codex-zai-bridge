@@ -124,14 +124,11 @@ cmd_run_codex() {
   model="$(default_or_env "$(get_env "CODEX_ZAI_MODEL")" "glm-5.1")"
 
   exec env \
-    LITELLM_API_KEY="dummy-key" \
+    OPENAI_API_KEY="dummy-key" \
     codex \
     -c "model=\"${model}\"" \
-    -c 'model_provider="zai_proxy"' \
-    -c 'model_providers.zai_proxy.name="Z.AI Bridge"' \
-    -c "model_providers.zai_proxy.base_url=\"http://127.0.0.1:${port}\"" \
-    -c 'model_providers.zai_proxy.env_key="LITELLM_API_KEY"' \
-    -c 'model_providers.zai_proxy.wire_api="responses"' \
+    -c 'model_provider="openai"' \
+    -c "openai_base_url=\"http://127.0.0.1:${port}\"" \
     "$@"
 }
 
@@ -154,6 +151,10 @@ case "${1:-}" in
     ;;
   doctor)
     cmd_doctor
+    ;;
+  resume)
+    shift
+    cmd_run_codex resume "$@"
     ;;
   rebuild)
     cmd_rebuild

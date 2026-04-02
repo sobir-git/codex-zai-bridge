@@ -69,6 +69,7 @@ Management commands:
 ```bash
 codex-zai status
 codex-zai doctor
+codex-zai resume
 codex-zai stop
 codex-zai rebuild
 codex-zai forget-key
@@ -101,6 +102,9 @@ If you need multiple side-by-side installs, give each one a different compose pr
 ```bash
 CODEX_ZAI_PROJECT=codex-zai-work codex-zai status
 ```
+
+Codex profiles are still available through the normal `codex` CLI options, but `codex-zai` keeps the bridge wiring pinned with explicit overrides so profile defaults cannot break the local bridge.
+`codex-zai` uses Codex's built-in `openai` provider name with `openai_base_url` pointed at the local bridge, so interactive `codex` and `codex-zai` runs should stay in the same resume history.
 
 ## Architecture
 

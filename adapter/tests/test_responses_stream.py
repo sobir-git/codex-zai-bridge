@@ -7,6 +7,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from fastapi.testclient import TestClient
 
 from open_responses_server.api_controller import LLMClient, app
 from open_responses_server.responses_service import process_chat_completions_stream
@@ -136,6 +137,36 @@ async def test_responses_route_streams_events_end_to_end(monkeypatch):
     assert_completed_ok(resp.text)
 
 
+def test_responses_websocket_streams_events_end_to_end(monkeypatch):
+    fake_client = FakeLLMClient(FakeResponse(STREAM_LINES))
+
+    async def fake_get_client():
+        return fake_client
+
+    monkeypatch.setattr(LLMClient, "get_client", fake_get_client)
+
+    with TestClient(app) as client:
+        with client.websocket_connect("/responses") as websocket:
+            websocket.send_json(
+                {
+                    "type": "response.create",
+                    **EXEC_REQUEST,
+                }
+            )
+            messages = []
+            while True:
+                try:
+                    messages.append(websocket.receive_text())
+                except Exception:
+                    break
+
+    assert fake_client.calls
+    args, kwargs = fake_client.calls[0]
+    assert args == ("POST", "/v1/chat/completions")
+    assert kwargs["json"]["stream"] is True
+    assert_completed_ok("\n".join(f"data: {message}" for message in messages))
+
+
 def test_codex_zai_exec_invokes_bridge_and_codex(tmp_path):
     env_paths = TempPathEnv(tmp_path)
     env_paths.prepare()
@@ -157,7 +188,7 @@ def test_codex_zai_exec_invokes_bridge_and_codex(tmp_path):
         f"""\
         #!/usr/bin/env sh
         printf '%s\\n' "$@" > "{calls_dir / 'codex-args.txt'}"
-        printf '%s\\n' "$LITELLM_API_KEY" > "{calls_dir / 'litellm-key.txt'}"
+        printf '%s\\n' "$OPENAI_API_KEY" > "{calls_dir / 'openai-key.txt'}"
         exit 0
         """,
     )
@@ -187,10 +218,10 @@ def test_codex_zai_exec_invokes_bridge_and_codex(tmp_path):
     )
 
     assert (calls_dir / "start.txt").read_text().strip() == "started"
-    assert (calls_dir / "litellm-key.txt").read_text().strip() == "dummy-key"
+    assert (calls_dir / "openai-key.txt").read_text().strip() == "dummy-key"
 
     codex_args = (calls_dir / "codex-args.txt").read_text().splitlines()
     assert "-c" in codex_args
     assert 'model="glm-5.1"' in codex_args
-    assert 'model_provider="zai_proxy"' in codex_args
-    assert 'model_providers.zai_proxy.base_url="http://127.0.0.1:18081"' in codex_args
+    assert 'model_provider="openai"' in codex_args
+    assert 'openai_base_url="http://127.0.0.1:18081"' in codex_args

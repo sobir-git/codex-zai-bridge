@@ -27,6 +27,8 @@ Responsibilities:
 - launches `codex` with temporary provider overrides
 
 This keeps the user's normal `codex` setup untouched.
+Codex `--profile` and other config defaults can still be used normally, but the wrapper pins the bridge-critical settings explicitly so profile choice only affects non-bridge defaults.
+The wrapper keeps Codex on its built-in `openai` provider name and only swaps the local base URL through `openai_base_url`. That preserves the normal Codex session namespace, so interactive `codex` and `codex-zai` threads should appear together in `codex resume`.
 
 ### 2. Responses bridge
 

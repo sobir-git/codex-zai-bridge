@@ -90,6 +90,8 @@ For side-by-side installs or testing, `CODEX_ZAI_PROJECT` can isolate container 
 CODEX_ZAI_PROJECT=codex-zai-test codex-zai status
 ```
 
+The install script also records `CODEX_ZAI_PROJECT`, `CODEX_ZAI_MODEL`, and `CODEX_ZAI_PORT` into the installed `.env` so custom setup survives later wrapper commands.
+
 ## Main risks going forward
 
 The integration is most likely to break if:

@@ -1,7 +1,7 @@
-import json
 import asyncio
+import json
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import StreamingResponse, Response
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from open_responses_server.common.config import logger, HEARTBEAT_INTERVAL, STREAM_TIMEOUT
@@ -349,10 +349,6 @@ async def chat_completions(request: Request):
     logger.info("Handling chat completions")
     response = await handle_chat_completions(request)
     logger.info("Chat completions handled")
-    if isinstance(response, StreamingResponse):
-        return response
-    elif isinstance(response, Response):
-        return response
     return response
 
 
@@ -363,37 +359,3 @@ async def health_check():
 @app.get("/")
 async def root():
     return {"message": "Open Responses Server is running."}
-
-@app.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"])
-async def proxy_endpoint(request: Request, path_name: str):
-    """
-    A generic proxy for any other endpoints, forwarding them to the LLM backend.
-    """
-    client = await LLMClient.get_client()
-    body = await request.body()
-    headers = {k: v for k, v in request.headers.items() if k.lower() != 'host'}
-
-    try:
-        url = f"{client.base_url}/v1/{path_name}"
-        
-        # Handle streaming for the proxy
-        is_stream = False
-        if body:
-            try:
-                is_stream = json.loads(body).get("stream", False)
-            except json.JSONDecodeError:
-                pass
-
-        if is_stream:
-            async def stream_proxy():
-                async with client.stream(request.method, url, headers=headers, content=body, timeout=STREAM_TIMEOUT) as response:
-                    async for chunk in response.aiter_bytes():
-                        yield chunk
-            return StreamingResponse(stream_proxy(), media_type=request.headers.get('accept', 'application/json'))
-        else:
-            response = await client.request(request.method, url, headers=headers, content=body, timeout=STREAM_TIMEOUT)
-            return Response(content=response.content, status_code=response.status_code, headers=response.headers)
-            
-    except Exception as e:
-        logger.error(f"Error in proxy endpoint: {e}")
-        raise HTTPException(status_code=500, detail=f"Error proxying request: {str(e)}") 

@@ -15,6 +15,12 @@ ensure_installed() {
   fi
 }
 
+default_or_env() {
+  local value="${1:-}"
+  local fallback="${2}"
+  printf '%s' "${value:-${fallback}}"
+}
+
 get_env() {
   local key="$1"
   grep -E "^${key}=" "${ENV_FILE}" | head -n1 | cut -d= -f2-
@@ -70,8 +76,7 @@ cmd_doctor() {
   command -v docker >/dev/null || { echo "Missing: docker"; exit 1; }
   command -v codex >/dev/null || { echo "Missing: codex"; exit 1; }
   local port
-  port="$(get_env "CODEX_ZAI_PORT")"
-  [[ -n "${port}" ]] || port="18081"
+  port="$(default_or_env "$(get_env "CODEX_ZAI_PORT")" "18081")"
   echo "docker: ok"
   echo "codex: ok"
   echo "port: ${port}"
@@ -115,10 +120,8 @@ cmd_run_codex() {
   "${START_SCRIPT}"
 
   local port model
-  port="$(get_env "CODEX_ZAI_PORT")"
-  model="$(get_env "CODEX_ZAI_MODEL")"
-  [[ -n "${port}" ]] || port="18081"
-  [[ -n "${model}" ]] || model="glm-5.1"
+  port="$(default_or_env "$(get_env "CODEX_ZAI_PORT")" "18081")"
+  model="$(default_or_env "$(get_env "CODEX_ZAI_MODEL")" "glm-5.1")"
 
   exec env \
     LITELLM_API_KEY="dummy-key" \

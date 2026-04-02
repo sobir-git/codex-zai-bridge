@@ -88,6 +88,8 @@ CODEX_ZAI_MODEL=glm-5.1
 CODEX_ZAI_PORT=18081
 ```
 
+You can also set `CODEX_ZAI_PROJECT`, `CODEX_ZAI_MODEL`, or `CODEX_ZAI_PORT` before running `./scripts/install.sh` to seed a custom install.
+
 You can also override the key per run with:
 
 ```bash
@@ -131,6 +133,8 @@ Check bridge health:
 ```bash
 codex-zai status
 ```
+
+`codex-zai status` exits non-zero when the bridge is unhealthy.
 
 Check prerequisites:
 

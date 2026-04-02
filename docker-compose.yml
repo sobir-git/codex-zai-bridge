@@ -1,6 +1,6 @@
 services:
   zai-upstream:
-    image: nginx:1.27-alpine
+    image: nginx:1.27.5-alpine
     security_opt:
       - no-new-privileges:true
     volumes:
@@ -32,3 +32,8 @@ services:
       LOG_LEVEL: INFO
       LOG_FILE_PATH: /tmp/api_adapter.log
       STREAM_TIMEOUT: 300
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')\" >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10

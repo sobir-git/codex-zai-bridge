@@ -6,6 +6,7 @@ INSTALL_DIR="${HOME}/.local/share/codex-zai"
 BIN_DIR="${HOME}/.local/bin"
 BIN_PATH="${BIN_DIR}/codex-zai"
 ENV_FILE="${INSTALL_DIR}/.env"
+PROJECT_NAME="${CODEX_ZAI_PROJECT:-codex-zai}"
 
 mkdir -p "${HOME}/.local/share" "${BIN_DIR}"
 rm -rf "${INSTALL_DIR}"
@@ -28,6 +29,9 @@ fi
 cp "${INSTALL_DIR}/bin/codex-zai" "${BIN_PATH}"
 chmod +x "${BIN_PATH}"
 chmod +x "${INSTALL_DIR}/scripts/"*.sh
+
+export COMPOSE_PROJECT_NAME="${PROJECT_NAME}"
+docker compose --env-file "${ENV_FILE}" -f "${INSTALL_DIR}/docker-compose.yml" build responses-server >/dev/null
 
 cat <<EOF
 Installed codex-zai to ${BIN_PATH}

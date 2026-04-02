@@ -6,6 +6,7 @@ ENV_FILE="${INSTALL_DIR}/.env"
 START_SCRIPT="${INSTALL_DIR}/scripts/start.sh"
 STOP_SCRIPT="${INSTALL_DIR}/scripts/stop.sh"
 STATUS_SCRIPT="${INSTALL_DIR}/scripts/status.sh"
+PROJECT_NAME="${CODEX_ZAI_PROJECT:-codex-zai}"
 
 ensure_installed() {
   if [[ ! -f "${ENV_FILE}" ]]; then
@@ -98,7 +99,7 @@ cmd_status() {
 
 cmd_rebuild() {
   ensure_installed
-  export COMPOSE_PROJECT_NAME=codex-zai
+  export COMPOSE_PROJECT_NAME="${PROJECT_NAME}"
   docker compose --env-file "${ENV_FILE}" -f "${INSTALL_DIR}/docker-compose.yml" build
 }
 

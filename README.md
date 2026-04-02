@@ -28,6 +28,9 @@ This repo packages that bridge into a simple command.
 - runs only on `127.0.0.1`
 - uses Docker Compose for reproducible setup
 - bundles a patched MIT-licensed Responses bridge based on `open-responses-server`
+- pins tested base image versions
+- includes regression tests for the Responses event sequence Codex expects
+- supports isolated installs via `CODEX_ZAI_PROJECT` to avoid compose-name collisions
 
 ## Install
 
@@ -91,6 +94,12 @@ You can also override the key per run with:
 ZAI_API_KEY=... codex-zai exec --ephemeral "say ok"
 ```
 
+If you need multiple side-by-side installs, give each one a different compose project:
+
+```bash
+CODEX_ZAI_PROJECT=codex-zai-work codex-zai status
+```
+
 ## Architecture
 
 The local stack has two containers:
@@ -100,6 +109,8 @@ The local stack has two containers:
 
 2. `responses-server`
    Accepts Responses API requests from Codex and converts them into chat completions.
+
+More detail lives in [`docs/architecture.md`](docs/architecture.md).
 
 The bridge binds only to:
 
@@ -111,7 +122,7 @@ The bridge binds only to:
 
 - This repo does not make Z.ai expose a native `/responses` API.
 - It exists because current Codex requires Responses for custom providers.
-- The vendored adapter source is MIT-licensed and acknowledged in [`THIRD_PARTY_NOTICES.md`](/home/fire/codex-zai-bridge/THIRD_PARTY_NOTICES.md).
+- The vendored adapter source is MIT-licensed and acknowledged in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Troubleshooting
 
@@ -131,6 +142,12 @@ Rebuild after changes:
 
 ```bash
 codex-zai rebuild
+```
+
+Run the packaged verification suite from the repo:
+
+```bash
+./scripts/test.sh
 ```
 
 Stop everything:
